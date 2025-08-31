@@ -1,0 +1,131 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, foundation]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER }}
+          POSTGRES_DB: ${{ secrets.TEST_POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: cd apps/frontend && npm ci
+
+      - name: Install backend dependencies
+        run: cd apps/backend && npm ci
+
+      - name: Lint frontend
+        run: cd apps/frontend && npm run lint
+
+      - name: Type check frontend
+        run: cd apps/frontend && npm run type-check
+
+      - name: Lint backend
+        run: cd apps/backend && npm run lint
+
+      - name: Type check backend
+        run: cd apps/backend && npm run type-check
+
+      - name: Setup test database
+        env:
+          DATABASE_URL: postgresql://${{ secrets.TEST_POSTGRES_USER || 'postgres' }}:${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}@localhost:5432/${{ secrets.TEST_POSTGRES_DB || 'rebalancex_test' }}
+        run: |
+          cd apps/backend
+          npx prisma generate
+          npx prisma db push
+
+      - name: Test frontend
+        run: cd apps/frontend && npm test
+
+      - name: Test backend
+        env:
+          DATABASE_URL: postgresql://${{ secrets.TEST_POSTGRES_USER || 'postgres' }}:${{ secrets.TEST_POSTGRES_PASSWORD || 'postgres' }}@localhost:5432/${{ secrets.TEST_POSTGRES_DB || 'rebalancex_test' }}
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'test-secret' }}
+        run: cd apps/backend && npm test
+
+      - name: Build frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:3001
+          VITE_STELLAR_NETWORK: testnet
+        run: cd apps/frontend && npm run build
+
+      - name: Build backend
+        run: cd apps/backend && npm run build
+
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/foundation'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Deploy to Vercel (Staging)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./apps/frontend
+          alias-domains: staging-rebalancex.vercel.app
+
+  deploy-production:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Deploy to Vercel (Production)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./apps/frontend
+          vercel-args: '--prod'
