@@ -9,7 +9,7 @@ export interface AuthContextType {
   profile: Database['public']['Tables']['profiles']['Row'] | null
   session: Session | null
   loading: boolean
-  signUp: (credentials: { email: string; password: string; options?: { data?: any; emailRedirectTo?: string } }) => Promise<{ error: AuthError | null }>
+  signUp: (credentials: { email: string; password: string; options?: { data?: Record<string, unknown>; emailRedirectTo?: string } }) => Promise<{ error: AuthError | null }>
   signIn: (credentials: SignInWithPasswordCredentials) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
@@ -22,6 +22,7 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -140,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signUp = async (credentials: { email: string; password: string; options?: { data?: any; emailRedirectTo?: string } }) => {
+  const signUp = async (credentials: { email: string; password: string; options?: { data?: Record<string, unknown>; emailRedirectTo?: string } }) => {
     clearError()
     setLoading(true)
     
