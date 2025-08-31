@@ -1,7 +1,15 @@
-import { create } from 'zustand';
+ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authAPI } from '../services/api/auth';
 import type { User, SignupData, LoginData } from '../services/api/auth';
+
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+}
 
 export interface AuthState {
   user: User | null;
@@ -42,8 +50,10 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false
           });
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 'Signup failed';
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error && 'response' in error 
+            ? (error as Error & ApiError).response?.data?.error || 'Signup failed'
+            : 'Signup failed';
           set({ error: errorMessage, isLoading: false });
           throw new Error(errorMessage);
         }
@@ -63,8 +73,10 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false
           });
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 'Login failed';
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error && 'response' in error 
+            ? (error as Error & ApiError).response?.data?.error || 'Login failed'
+            : 'Login failed';
           set({ error: errorMessage, isLoading: false });
           throw new Error(errorMessage);
         }
@@ -96,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false
           });
-        } catch (error: any) {
+        } catch {
           localStorage.removeItem('auth_token');
           set({
             user: null,
@@ -118,8 +130,10 @@ export const useAuthStore = create<AuthState>()(
             user: response.user,
             isLoading: false
           });
-        } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 'Failed to update wallet';
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error && 'response' in error 
+            ? (error as Error & ApiError).response?.data?.error || 'Failed to update wallet'
+            : 'Failed to update wallet';
           set({ error: errorMessage, isLoading: false });
           throw new Error(errorMessage);
         }

@@ -27,8 +27,8 @@ export default function WalletSetupPage() {
       if (freighterWallet) {
         await updateWallet(freighterWallet.publicKey);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -47,8 +47,8 @@ export default function WalletSetupPage() {
     try {
       const wallet = await generateWallet(password);
       await updateWallet(wallet.publicKey, JSON.stringify({ encrypted: true }));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -67,8 +67,8 @@ export default function WalletSetupPage() {
     try {
       const wallet = await importWallet(secretKey, password);
       await updateWallet(wallet.publicKey, JSON.stringify({ encrypted: true }));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
