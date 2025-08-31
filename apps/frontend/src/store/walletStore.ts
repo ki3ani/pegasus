@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { StellarWalletService, WalletInfo, EncryptedWallet } from '../services/stellar';
-import { FreighterService, FreighterWallet } from '../services/freighter';
+import { StellarWalletService } from '../services/stellar';
+import { FreighterService } from '../services/freighter';
+import type { WalletInfo, EncryptedWallet } from '../services/stellar';
+import type { FreighterWallet } from '../services/freighter';
 
 export type WalletType = 'generated' | 'imported' | 'freighter';
 

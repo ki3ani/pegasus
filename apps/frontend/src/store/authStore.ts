@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authAPI, User, SignupData, LoginData } from '../services/api/auth';
+import { authAPI } from '../services/api/auth';
+import type { User, SignupData, LoginData } from '../services/api/auth';
 
 export interface AuthState {
   user: User | null;
@@ -20,7 +21,7 @@ export interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
