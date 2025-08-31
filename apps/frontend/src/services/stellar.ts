@@ -30,11 +30,8 @@ export class StellarWalletService {
   private static ENCRYPTION_KEY = 'rebalancex-wallet-key-2024';
 
   static generateWallet(): WalletInfo {
-    // Stellar SDK v14+ requires explicit random seed generation
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
-    const buffer = Buffer.from(randomBytes);
-    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(buffer);
+    // Use Stellar SDK's built-in random keypair generation
+    const keypair = StellarSdk.Keypair.random();
     
     return {
       publicKey: keypair.publicKey(),
