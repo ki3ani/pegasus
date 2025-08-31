@@ -1,4 +1,4 @@
-import { isConnected, getPublicKey, signTransaction, requestAccess } from '@stellar/freighter-api';
+import * as freighterApi from '@stellar/freighter-api';
 
 export interface FreighterWallet {
   publicKey: string;
@@ -8,7 +8,8 @@ export interface FreighterWallet {
 export class FreighterService {
   static async checkConnection(): Promise<boolean> {
     try {
-      return await isConnected();
+      const result = await freighterApi.isConnected();
+      return result.isConnected;
     } catch (error) {
       console.error('Freighter connection check failed:', error);
       return false;
@@ -18,17 +19,17 @@ export class FreighterService {
   static async connect(): Promise<FreighterWallet | null> {
     try {
       // First request access to the user's Freighter wallet
-      await requestAccess();
+      await freighterApi.requestAccess();
       
-      const connected = await isConnected();
-      if (!connected) {
+      const connectedResult = await freighterApi.isConnected();
+      if (!connectedResult.isConnected) {
         throw new Error('Freighter wallet connection was denied or not available.');
       }
 
-      const publicKey = await getPublicKey();
+      const addressResponse = await freighterApi.getAddress();
       
       return {
-        publicKey,
+        publicKey: addressResponse.address,
         isConnected: true
       };
     } catch (error) {
@@ -39,12 +40,13 @@ export class FreighterService {
 
   static async signTransaction(transactionXdr: string): Promise<string> {
     try {
-      const connected = await isConnected();
-      if (!connected) {
+      const connectedResult = await freighterApi.isConnected();
+      if (!connectedResult.isConnected) {
         throw new Error('Freighter wallet not connected');
       }
 
-      return await signTransaction(transactionXdr);
+      const result = await freighterApi.signTransaction(transactionXdr);
+      return result.signedTxXdr;
     } catch (error) {
       console.error('Failed to sign transaction:', error);
       throw new Error('Transaction signing failed');
@@ -53,10 +55,11 @@ export class FreighterService {
 
   static async getPublicKey(): Promise<string | null> {
     try {
-      const connected = await isConnected();
-      if (!connected) return null;
+      const connectedResult = await freighterApi.isConnected();
+      if (!connectedResult.isConnected) return null;
 
-      return await getPublicKey();
+      const response = await freighterApi.getAddress();
+      return response.address;
     } catch (error) {
       console.error('Failed to get public key:', error);
       return null;

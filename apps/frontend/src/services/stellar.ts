@@ -32,7 +32,8 @@ export class StellarWalletService {
     // Stellar SDK v14+ requires explicit random seed generation
     const randomBytes = new Uint8Array(32);
     crypto.getRandomValues(randomBytes);
-    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(randomBytes);
+    const buffer = Buffer.from(randomBytes);
+    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(buffer);
     
     return {
       publicKey: keypair.publicKey(),
@@ -110,11 +111,25 @@ export class StellarWalletService {
       const account = await this.getAccountInfo(publicKey);
       if (!account) return [];
 
-      return account.balances.map(balance => ({
-        asset: balance.asset_type === 'native' ? 'XLM' : 
-               `${balance.asset_code}:${balance.asset_issuer}`,
-        balance: balance.balance
-      }));
+      return account.balances.map(balance => {
+        if (balance.asset_type === 'native') {
+          return {
+            asset: 'XLM',
+            balance: balance.balance
+          };
+        } else if (balance.asset_type === 'credit_alphanum4' || balance.asset_type === 'credit_alphanum12') {
+          return {
+            asset: `${balance.asset_code}:${balance.asset_issuer}`,
+            balance: balance.balance
+          };
+        } else {
+          // Handle liquidity pool balances
+          return {
+            asset: 'LP Token',
+            balance: balance.balance
+          };
+        }
+      });
     } catch (error) {
       console.error('Failed to get account balances:', error);
       return [];
