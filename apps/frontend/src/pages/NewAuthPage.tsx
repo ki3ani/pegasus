@@ -22,7 +22,7 @@ export default function NewAuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const from = (location.state as any)?.from?.pathname || '/wallet-setup'
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/wallet-setup'
 
   useEffect(() => {
     if (user) {
@@ -66,12 +66,13 @@ export default function NewAuthPage() {
     return true
   }
 
-  const getErrorMessage = (error: any) => {
+  const getErrorMessage = (error: unknown) => {
     if (!error) return null
     
     // Handle both AuthError objects and string errors
-    const errorCode = error?.code || ''
-    const errorMessage = error?.message || error
+    const err = error as { code?: string; message?: string } | string
+    const errorCode = typeof err === 'string' ? '' : err.code || ''
+    const errorMessage = typeof err === 'string' ? err : err.message || String(error)
     
     console.log('Error details:', { errorCode, errorMessage, fullError: error }) // Debug logging
     
@@ -142,7 +143,7 @@ export default function NewAuthPage() {
           })
         }
       }
-    } catch (err) {
+    } catch {
       setLocalError('An unexpected error occurred. Please try again.')
     }
   }

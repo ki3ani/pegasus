@@ -11,7 +11,7 @@ export default function SimpleAuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const from = (location.state as any)?.from?.pathname || '/dashboard'
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard'
 
   useEffect(() => {
     if (user) {
