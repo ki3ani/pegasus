@@ -1,0 +1,21 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "env": {
+    "VITE_STELLAR_NETWORK": "testnet"
+  },
+  "build": {
+    "env": {
+      "VITE_API_BASE_URL": "@vercel_backend_url",
+      "VITE_STELLAR_NETWORK": "testnet"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
