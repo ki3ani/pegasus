@@ -1,14 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { useWalletStore } from './store/walletStore';
-import WelcomePage from './pages/WelcomePage';
+import MinimalWelcome from './pages/MinimalWelcome';
 import SimpleAuthPage from './pages/SimpleAuthPage';
-import ProfileDashboard from './pages/ProfileDashboard';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import WalletSetupPage from './pages/WalletSetupPage';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
-  const { hasWallet, isConnected } = useWalletStore();
 
   if (loading) {
     return (
@@ -27,28 +26,20 @@ function AppRoutes() {
         {!user ? (
           // Unauthenticated routes
           <>
-            <Route path="/" element={<WelcomePage />} />
+            <Route path="/" element={<MinimalWelcome />} />
             <Route path="/auth" element={<SimpleAuthPage />} />
             <Route path="/login" element={<SimpleAuthPage />} />
             <Route path="/signup" element={<SimpleAuthPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
-        ) : !hasWallet() || !isConnected ? (
-          // Authenticated but no wallet
-          <>
-            <Route path="/wallet-setup" element={<WalletSetupPage />} />
-            <Route path="/dashboard" element={<Navigate to="/wallet-setup" replace />} />
-            <Route path="/" element={<Navigate to="/wallet-setup" replace />} />
-            <Route path="*" element={<Navigate to="/wallet-setup" replace />} />
-          </>
         ) : (
-          // Authenticated with wallet
+          // Authenticated user - wallet is optional
           <>
-            <Route path="/dashboard" element={<ProfileDashboard />} />
-            <Route path="/profile" element={<ProfileDashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/wallet-setup" element={<WalletSetupPage />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/profile" replace />} />
+            <Route path="*" element={<Navigate to="/profile" replace />} />
           </>
         )}
       </Routes>

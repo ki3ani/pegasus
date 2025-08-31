@@ -17,7 +17,7 @@ const io = new Server(httpServer, {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 
 app.use(helmet());
 app.use(cors({

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWalletStore } from '../store/walletStore';
 import { useAuthStore } from '../store/authStore';
 import { FreighterService } from '../services/freighter';
+import Navigation from '../components/Navigation';
 
 export default function WalletSetupPage() {
   const [activeTab, setActiveTab] = useState<'generate' | 'import' | 'freighter'>('freighter');
@@ -75,7 +76,9 @@ export default function WalletSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Set up your wallet
@@ -258,6 +261,7 @@ export default function WalletSetupPage() {
           )}
         </div>
       </div>
+      </main>
     </div>
   );
 }
