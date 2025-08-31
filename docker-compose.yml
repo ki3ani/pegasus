@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: rebalancex-db
+    restart: always
+    environment:
+      POSTGRES_DB: rebalancex
+      POSTGRES_USER: rebalancex_user
+      POSTGRES_PASSWORD: secure_password_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

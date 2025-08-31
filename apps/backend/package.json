@@ -1,0 +1,53 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "RebalanceX Backend API",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "test": "NODE_ENV=test vitest --config ./vitest.config.ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.7",
+    "@stellar/stellar-sdk": "^14.1.1",
+    "socket.io": "^4.8.1",
+    "node-cron": "^3.0.3",
+    "axios": "^1.7.9",
+    "crypto-js": "^4.2.0",
+    "@prisma/client": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/express": "^5.0.1",
+    "@types/cors": "^2.8.17",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/node-cron": "^3.0.11",
+    "@types/crypto-js": "^4.2.2",
+    "typescript": "^5.4.5",
+    "tsx": "^4.19.2",
+    "eslint": "^9.33.0",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "vitest": "^2.1.8",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2",
+    "prisma": "^6.15.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
