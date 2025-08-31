@@ -32,7 +32,7 @@ export default function AuthPage() {
           password: formData.password
         });
       }
-    } catch (error) {
+    } catch {
       // Error is handled by store
     }
   };

@@ -9,11 +9,12 @@ const HORIZON_URL = STELLAR_NETWORK === 'mainnet'
 const server = new StellarSdk.Horizon.Server(HORIZON_URL);
 
 // Configure the network properly
-if (STELLAR_NETWORK === 'testnet') {
-  StellarSdk.Networks.TESTNET;
-} else {
-  StellarSdk.Networks.PUBLIC;
-}
+const network = STELLAR_NETWORK === 'testnet' 
+  ? StellarSdk.Networks.TESTNET 
+  : StellarSdk.Networks.PUBLIC;
+
+// Use the network variable if needed
+console.log('Using network:', network);
 
 export interface WalletInfo {
   publicKey: string;
@@ -48,7 +49,7 @@ export class StellarWalletService {
         publicKey: keypair.publicKey(),
         secretKey: keypair.secret()
       };
-    } catch (error) {
+    } catch {
       throw new Error('Invalid secret key format');
     }
   }
@@ -76,7 +77,7 @@ export class StellarWalletService {
         publicKey: encryptedWallet.publicKey,
         secretKey: decryptedData.secretKey
       };
-    } catch (error) {
+    } catch {
       throw new Error('Failed to decrypt wallet - incorrect password');
     }
   }
