@@ -18,12 +18,15 @@
     "type-check": "npm run type-check --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
     "@types/node": "^20.14.0",
+    "concurrently": "^8.2.2",
     "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "globals": "^16.3.0"
   }
 }
