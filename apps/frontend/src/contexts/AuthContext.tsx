@@ -252,7 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithGoogle = async () => {
     clearError()
     
-    const redirectUrl = window.location.origin
+    const redirectUrl = window.location.origin + '/auth'
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -271,7 +271,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = async (email: string) => {
     clearError()
     
-    // Use proper redirect URL that works on all devices
     const redirectUrl = window.location.origin + '/reset-password'
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -288,7 +287,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resendVerification = async (email: string) => {
     clearError()
     
-    // Use proper redirect URL that works on all devices  
     const redirectUrl = window.location.origin + '/auth'
     
     const { error } = await supabase.auth.resend({
