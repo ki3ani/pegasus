@@ -19,7 +19,7 @@ export const authenticateToken = (req: AuthRequest, res: express.Response, next:
     const decoded = verifyToken(token);
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch {
     res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
