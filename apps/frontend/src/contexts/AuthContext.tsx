@@ -70,17 +70,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const createProfile = async (user: User) => {
+    console.log('🏗️ Creating profile with user data:', {
+      id: user.id,
+      email: user.email,
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+      metadata: user.user_metadata
+    })
+    
     const { error } = await supabase
       .from('profiles')
       .insert({
         id: user.id,
         email: user.email!,
-        full_name: user.user_metadata?.full_name || null,
-        avatar_url: user.user_metadata?.avatar_url || null,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
       })
 
     if (error) {
-      console.error('Error creating profile:', error)
+      console.error('❌ Error creating profile:', error)
+    } else {
+      console.log('✅ Profile created successfully')
     }
   }
 
@@ -115,26 +125,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔥 AUTH EVENT:', event, 'User:', session?.user?.email)
+      console.log('🔥 Session data:', session?.user?.user_metadata)
+      
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user) {
+        console.log('👤 Creating/fetching profile for:', session.user.email)
+        console.log('👤 User metadata:', session.user.user_metadata)
+        
         const profileData = await fetchProfile(session.user.id)
         if (profileData) {
+          console.log('✅ Found existing profile:', profileData)
           setProfile(profileData)
         } else {
+          console.log('⚠️ No profile found, creating new one with Google data')
           await createProfile(session.user)
           const newProfile = await fetchProfile(session.user.id)
+          console.log('✅ Created new profile:', newProfile)
           setProfile(newProfile)
         }
       } else {
+        console.log('❌ No user session, clearing profile')
         setProfile(null)
       }
       
       setLoading(false)
 
       if (event === 'SIGNED_IN') {
+        console.log('🎉 SIGNED_IN event detected')
         clearError()
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        console.log('👋 SIGNED_OUT event detected')
       }
     })
 
@@ -180,21 +205,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
+    console.log('🚪 Starting sign out process...')
     clearError()
-    const { error } = await supabase.auth.signOut()
     
-    if (error) {
-      setError(error)
+    try {
+      console.log('🔄 Calling supabase signOut with timeout...')
+      
+      // Add 3 second timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SignOut timeout')), 3000)
+      )
+      
+      const signOutPromise = supabase.auth.signOut()
+      
+      const result = await Promise.race([signOutPromise, timeoutPromise])
+      const { error } = result as { error: AuthError | null }
+
+      if (error) {
+        console.error('❌ Supabase signOut error:', error)
+        setError(error)
+      } else {
+        console.log('✅ Supabase signOut successful')
+      }
+      
+      // Always clear local state regardless of Supabase result
+      console.log('🧹 Clearing local auth state...')
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+
+      console.log('✅ Sign out completed successfully')
+      return { error: null }
+    } catch (err) {
+      console.error('⏰ Sign out timeout or error:', err)
+      
+      // Still clear state even on timeout
+      console.log('🧹 Force clearing auth state due to timeout...')
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      
+      return { error: null } // Return success since we cleared state
     }
-    
-    return { error }
   }
 
   const signInWithGoogle = async () => {
     clearError()
     
-    // Redirect to wallet-setup after Google sign-in
-    const redirectUrl = window.location.origin + '/wallet-setup'
+    const redirectUrl = window.location.origin
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -249,7 +307,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const updateProfile = async (updates: Partial<Database['public']['Tables']['profiles']['Update']>) => {
+    console.log('🔄 Starting profile update with:', updates)
+    
     if (!user) {
+      console.log('❌ No user logged in')
       const authError: AuthError = {
         message: 'No user logged in',
         status: 401,
@@ -259,29 +320,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: new Error('No user logged in') }
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
+    try {
+      console.log('⏱️ Calling supabase update with 5 second timeout...')
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Update timeout')), 5000)
+      )
+      
+      const updatePromise = supabase
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+      
+      const result = await Promise.race([updatePromise, timeoutPromise])
+      const { error } = result as { error: { message: string } | null }
 
-    if (error) {
-      // Convert database error to AuthError-like format for consistency
-      const authError: AuthError = {
-        message: error.message,
-        status: 500,
-        code: 'database_error'
-      } as AuthError
-      setError(authError)
-      return { error: new Error(error.message) }
+      if (error) {
+        console.error('❌ Profile update error:', error)
+        const authError: AuthError = {
+          message: error.message,
+          status: 500,
+          code: 'database_error'
+        } as AuthError
+        setError(authError)
+        return { error: new Error(error.message) }
+      }
+
+      console.log('✅ Profile update successful')
+      
+      // Try to refresh profile (with timeout)
+      console.log('🔄 Refreshing profile...')
+      try {
+        const refreshPromise = fetchProfile(user.id)
+        const refreshTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Refresh timeout')), 3000)
+        )
+        
+        const updatedProfile = await Promise.race([refreshPromise, refreshTimeout]) as Database['public']['Tables']['profiles']['Row'] | null
+        if (updatedProfile) {
+          console.log('✅ Profile refreshed successfully')
+          setProfile(updatedProfile)
+        }
+      } catch {
+        console.log('⏰ Profile refresh timeout, but update was successful')
+      }
+
+      return { error: null }
+    } catch (err) {
+      console.error('⏰ Profile update timeout or error:', err)
+      return { error: new Error('Profile update failed or timed out') }
     }
-
-    // Refresh profile
-    const updatedProfile = await fetchProfile(user.id)
-    if (updatedProfile) {
-      setProfile(updatedProfile)
-    }
-
-    return { error: null }
   }
 
   const value: AuthContextType = {

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { 
   ArrowRightOnRectangleIcon,
@@ -10,9 +10,26 @@ import {
 export default function Navigation() {
   const { signOut } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const handleSignOut = async () => {
-    await signOut()
+    console.log('Sign out button clicked!')
+    
+    // Force immediate redirect - don't wait for signOut to complete
+    console.log('Force navigating to / immediately')
+    navigate('/', { replace: true })
+    
+    // Try signOut in background
+    try {
+      console.log('Calling signOut in background...')
+      signOut().then(result => {
+        console.log('Background signOut completed:', result)
+      }).catch(error => {
+        console.error('Background signOut error:', error)
+      })
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
   const navItems = [
@@ -64,7 +81,8 @@ export default function Navigation() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleSignOut}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer bg-red-100 hover:bg-red-200"
+              style={{pointerEvents: 'auto'}}
             >
               <ArrowRightOnRectangleIcon className="h-4 w-4" />
               <span className="hidden sm:block">Sign out</span>
