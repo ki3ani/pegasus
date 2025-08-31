@@ -1,54 +1,137 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function WelcomePage() {
+  const { user } = useAuth();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">RebalanceX</h1>
-          <p className="text-gray-600">
-            Non-custodial portfolio rebalancing on Stellar
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <header className="flex justify-between items-center py-6">
+          <div className="text-2xl font-bold text-indigo-600">
+            RebalanceX
+          </div>
+          <div className="space-x-4">
+            {user ? (
+              <Link
+                to="/dashboard"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/auth"
+                  className="text-indigo-600 hover:text-indigo-500 font-medium"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/auth"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <main className="py-20 text-center">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Portfolio Rebalancing
+            <span className="block text-indigo-600">Made Simple</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Automate your crypto portfolio rebalancing on Stellar. Non-custodial, 
+            secure, and designed for maximum returns with email verification and Google Sign-in.
           </p>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Features</h2>
-            <div className="space-y-3 text-left">
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-gray-700">Non-custodial wallet management</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-gray-700">Automated portfolio rebalancing</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-gray-700">KALE rewards integration</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-gray-700">Real-time price monitoring</span>
-              </div>
+          <div className="space-x-4">
+            {user ? (
+              <Link
+                to="/dashboard"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md text-lg font-medium inline-block"
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md text-lg font-medium inline-block"
+              >
+                Start Rebalancing
+              </Link>
+            )}
+            <a
+              href="#features"
+              className="text-indigo-600 hover:text-indigo-500 px-8 py-3 text-lg font-medium inline-block"
+            >
+              Learn More
+            </a>
+          </div>
+        </main>
+
+        {/* Features Section */}
+        <section id="features" className="py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Why Choose RebalanceX?
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Built on Stellar with modern authentication and security
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-xl shadow-sm">
+              <div className="text-indigo-600 text-4xl mb-4">🔐</div>
+              <h3 className="text-xl font-semibold mb-3">Secure Authentication</h3>
+              <p className="text-gray-600">
+                Google Sign-in, email verification, and secure session management powered by Supabase.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-sm">
+              <div className="text-indigo-600 text-4xl mb-4">⚡</div>
+              <h3 className="text-xl font-semibold mb-3">Lightning Fast</h3>
+              <p className="text-gray-600">
+                Powered by Stellar network for instant, low-cost transactions.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-sm">
+              <div className="text-indigo-600 text-4xl mb-4">🎯</div>
+              <h3 className="text-xl font-semibold mb-3">Smart Rebalancing</h3>
+              <p className="text-gray-600">
+                AI-powered portfolio optimization and automated rebalancing (Coming in Phase 2).
+              </p>
             </div>
           </div>
-          
-          <Link
-            to="/auth"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Get Started
-          </Link>
-        </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 text-center">
+          <div className="bg-white rounded-2xl p-12 shadow-lg">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Ready to Get Started?
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              Join thousands of users who trust RebalanceX with their portfolio management.
+              Phase 1 includes secure authentication and wallet management.
+            </p>
+            {!user && (
+              <Link
+                to="/auth"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-md text-lg font-medium inline-block"
+              >
+                Create Free Account
+              </Link>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
