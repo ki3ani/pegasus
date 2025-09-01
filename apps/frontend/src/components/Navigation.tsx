@@ -13,23 +13,19 @@ export default function Navigation() {
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
-    console.log('Sign out button clicked!')
+    console.log('⚡ Instant sign out!')
     
-    // Force immediate redirect - don't wait for signOut to complete
-    console.log('Force navigating to / immediately')
+    console.log('🚀 Instant navigation to welcome page')
     navigate('/', { replace: true })
     
-    // Try signOut in background
-    try {
-      console.log('Calling signOut in background...')
-      signOut().then(result => {
-        console.log('Background signOut completed:', result)
-      }).catch(error => {
-        console.error('Background signOut error:', error)
+    console.log('🧹 Background auth cleanup starting...')
+    signOut()
+      .then(() => {
+        console.log('✅ Background signOut completed')
       })
-    } catch (error) {
-      console.error('Sign out error:', error)
-    }
+      .catch(error => {
+        console.error('❌ Background signOut error (user already redirected):', error)
+      })
   }
 
   const navItems = [

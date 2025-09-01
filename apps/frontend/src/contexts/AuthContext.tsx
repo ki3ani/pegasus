@@ -347,22 +347,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('✅ Profile update successful')
       
-      // Try to refresh profile (with timeout)
-      console.log('🔄 Refreshing profile...')
-      try {
-        const refreshPromise = fetchProfile(user.id)
-        const refreshTimeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Refresh timeout')), 3000)
-        )
-        
-        const updatedProfile = await Promise.race([refreshPromise, refreshTimeout]) as Database['public']['Tables']['profiles']['Row'] | null
-        if (updatedProfile) {
-          console.log('✅ Profile refreshed successfully')
-          setProfile(updatedProfile)
-        }
-      } catch {
-        console.log('⏰ Profile refresh timeout, but update was successful')
-      }
+      // Skip refresh - optimistic UI already shows updates
+      console.log('🚀 Skipping profile refresh - using optimistic updates')
 
       return { error: null }
     } catch (err) {
