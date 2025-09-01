@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Navigation from '../components/Navigation'
 import { Button } from '../components/ui/button'
@@ -89,8 +89,7 @@ export default function Profile() {
       .then(({ error }) => {
         if (error) {
           console.error('❌ Background save failed, reverting changes:', error)
-          // Revert to original form data on failure
-          setEditForm(originalForm)
+          revertToOriginalForm()
           // Could show error toast here
         } else {
           console.log('✅ Background save completed')
@@ -100,22 +99,33 @@ export default function Profile() {
       })
       .catch(error => {
         console.error('❌ Background save error, reverting changes:', error)
-        // Revert to original form data on error
-        setEditForm(originalForm)
+        revertToOriginalForm()
         // Could show error toast here
       })
   }
 
-  const handleEditCancel = () => {
+  const revertToOriginalForm = () => {
+    console.log('🔄 Reverting to original form data')
     setEditForm(originalForm)
+  }
+
+  const handleEditCancel = () => {
+    revertToOriginalForm()
     setIsEditing(false)
     setAvatarFile(null)
     setAvatarPreview(null)
   }
 
-  // Extract avatar logic to avoid duplication
-  const displayAvatarUrl = editForm.avatar_url?.trim() || profile?.avatar_url
-  const displayFullName = editForm.full_name?.trim() || profile?.full_name || 'Not set'
+  // Optimize computed values with useMemo to prevent unnecessary recalculations
+  const displayAvatarUrl = useMemo(() => 
+    editForm.avatar_url?.trim() || profile?.avatar_url, 
+    [editForm.avatar_url, profile?.avatar_url]
+  )
+  
+  const displayFullName = useMemo(() => 
+    editForm.full_name?.trim() || profile?.full_name || 'Not set',
+    [editForm.full_name, profile?.full_name]
+  )
 
   return (
     <div className="min-h-screen bg-background">
