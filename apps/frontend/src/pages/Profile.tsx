@@ -16,16 +16,15 @@ export default function Profile() {
   const { profile, updateProfile, loading, error } = useAuth()
   
   const [isEditing, setIsEditing] = useState(false)
-  const [editForm, setEditForm] = useState({
-    full_name: profile?.full_name || '',
-    email: profile?.email || '',
-    avatar_url: profile?.avatar_url || ''
-  })
-  const [originalForm, setOriginalForm] = useState({
-    full_name: profile?.full_name || '',
-    email: profile?.email || '',
-    avatar_url: profile?.avatar_url || ''
-  })
+  // Initialize with empty state to avoid undefined profile issues
+  const initialFormState = {
+    full_name: '',
+    email: '',
+    avatar_url: ''
+  }
+  
+  const [editForm, setEditForm] = useState(initialFormState)
+  const [originalForm, setOriginalForm] = useState(initialFormState)
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -105,6 +104,12 @@ export default function Profile() {
   }
 
   const revertToOriginalForm = () => {
+    // Safety check: don't revert if profile hasn't loaded yet
+    if (!profile) {
+      console.warn('⚠️ Cannot revert: profile not loaded yet')
+      return
+    }
+    
     console.log('🔄 Reverting to original form data')
     setEditForm(originalForm)
   }
@@ -116,16 +121,15 @@ export default function Profile() {
     setAvatarPreview(null)
   }
 
-  // Optimize computed values with useMemo to prevent unnecessary recalculations
-  const displayAvatarUrl = useMemo(() => 
-    editForm.avatar_url?.trim() || profile?.avatar_url, 
-    [editForm.avatar_url, profile?.avatar_url]
-  )
+  const displayAvatarUrl = useMemo(() => {
+    if (!profile) return null
+    return editForm.avatar_url?.trim() || profile.avatar_url
+  }, [editForm.avatar_url, profile?.avatar_url, profile])
   
-  const displayFullName = useMemo(() => 
-    editForm.full_name?.trim() || profile?.full_name || 'Not set',
-    [editForm.full_name, profile?.full_name]
-  )
+  const displayFullName = useMemo(() => {
+    if (!profile) return 'Loading...'
+    return editForm.full_name?.trim() || profile.full_name || 'Not set'
+  }, [editForm.full_name, profile?.full_name, profile])
 
   return (
     <div className="min-h-screen bg-background">
