@@ -124,12 +124,12 @@ export default function Profile() {
   const displayAvatarUrl = useMemo(() => {
     if (!profile) return null
     return editForm.avatar_url?.trim() || profile.avatar_url
-  }, [editForm.avatar_url, profile?.avatar_url, profile])
+  }, [editForm.avatar_url, profile])
   
   const displayFullName = useMemo(() => {
     if (!profile) return 'Loading...'
     return editForm.full_name?.trim() || profile.full_name || 'Not set'
-  }, [editForm.full_name, profile?.full_name, profile])
+  }, [editForm.full_name, profile])
 
   return (
     <div className="min-h-screen bg-background">
