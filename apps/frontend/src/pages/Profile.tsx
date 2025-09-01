@@ -49,11 +49,11 @@ export default function Profile() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Profile form submitted!')
+    console.log('✨ Optimistic profile update!')
     
     let avatarUrl = editForm.avatar_url
     if (avatarFile && avatarPreview) {
-      avatarUrl = avatarPreview // Use the base64 preview as the avatar URL
+      avatarUrl = avatarPreview
     }
     
     const updates = {
@@ -61,25 +61,30 @@ export default function Profile() {
       avatar_url: avatarUrl || null
     }
     
-    console.log('Force closing edit mode immediately')
-    // Force close edit mode immediately
+    console.log('⚡ Instant UI update - closing form')
     setIsEditing(false)
     setAvatarFile(null)
     setAvatarPreview(null)
     
-    // Try update in background
-    console.log('Running profile update in background with:', updates)
-    updateProfile(updates).then(({ error }) => {
-      console.log('Background profile update result:', { error })
-      if (error) {
-        console.error('Background profile update error:', error)
-        // Could show a toast notification here
-      } else {
-        console.log('Background profile update successful')
-      }
-    }).catch(error => {
-      console.error('Background profile update caught error:', error)
+    setEditForm({
+      full_name: updates.full_name || '',
+      email: editForm.email,
+      avatar_url: updates.avatar_url || ''
     })
+    
+    // 3. Save to database in background (user doesn't wait)
+    console.log('💾 Background save starting...')
+    updateProfile(updates)
+      .then(({ error }) => {
+        if (error) {
+          console.error('❌ Background save failed:', error)
+        } else {
+          console.log('✅ Background save completed')
+        }
+      })
+      .catch(error => {
+        console.error('❌ Background save error:', error)
+      })
   }
 
   const handleEditCancel = () => {
@@ -213,9 +218,9 @@ export default function Profile() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Profile Picture</label>
                       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                        {profile?.avatar_url ? (
+                        {(editForm.avatar_url?.trim() || profile?.avatar_url) ? (
                           <img 
-                            src={profile.avatar_url} 
+                            src={editForm.avatar_url?.trim() || profile?.avatar_url || ''} 
                             alt="Profile" 
                             className="w-full h-full object-cover"
                           />
@@ -226,7 +231,7 @@ export default function Profile() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                      <p className="text-lg">{profile?.full_name || 'Not set'}</p>
+                      <p className="text-lg">{editForm.full_name?.trim() || profile?.full_name || 'Not set'}</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Email</label>
