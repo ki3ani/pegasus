@@ -21,17 +21,24 @@ export default function Profile() {
     email: profile?.email || '',
     avatar_url: profile?.avatar_url || ''
   })
+  const [originalForm, setOriginalForm] = useState({
+    full_name: profile?.full_name || '',
+    email: profile?.email || '',
+    avatar_url: profile?.avatar_url || ''
+  })
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (profile) {
-      setEditForm({
+      const formData = {
         full_name: profile.full_name || '',
         email: profile.email || '',
         avatar_url: profile.avatar_url || ''
-      })
+      }
+      setEditForm(formData)
+      setOriginalForm(formData)
     }
   }, [profile])
 
@@ -61,42 +68,54 @@ export default function Profile() {
       avatar_url: avatarUrl || null
     }
     
+    // Store current state for potential rollback
+    const optimisticForm = {
+      full_name: updates.full_name || '',
+      email: editForm.email,
+      avatar_url: updates.avatar_url || ''
+    }
+    
     console.log('⚡ Instant UI update - closing form')
     setIsEditing(false)
     setAvatarFile(null)
     setAvatarPreview(null)
     
-    setEditForm({
-      full_name: updates.full_name || '',
-      email: editForm.email,
-      avatar_url: updates.avatar_url || ''
-    })
+    // Apply optimistic update
+    setEditForm(optimisticForm)
     
-    // 3. Save to database in background (user doesn't wait)
+    // Save to database in background
     console.log('💾 Background save starting...')
     updateProfile(updates)
       .then(({ error }) => {
         if (error) {
-          console.error('❌ Background save failed:', error)
+          console.error('❌ Background save failed, reverting changes:', error)
+          // Revert to original form data on failure
+          setEditForm(originalForm)
+          // Could show error toast here
         } else {
           console.log('✅ Background save completed')
+          // Update original form to match successful save
+          setOriginalForm(optimisticForm)
         }
       })
       .catch(error => {
-        console.error('❌ Background save error:', error)
+        console.error('❌ Background save error, reverting changes:', error)
+        // Revert to original form data on error
+        setEditForm(originalForm)
+        // Could show error toast here
       })
   }
 
   const handleEditCancel = () => {
-    setEditForm({
-      full_name: profile?.full_name || '',
-      email: profile?.email || '',
-      avatar_url: profile?.avatar_url || ''
-    })
+    setEditForm(originalForm)
     setIsEditing(false)
     setAvatarFile(null)
     setAvatarPreview(null)
   }
+
+  // Extract avatar logic to avoid duplication
+  const displayAvatarUrl = editForm.avatar_url?.trim() || profile?.avatar_url
+  const displayFullName = editForm.full_name?.trim() || profile?.full_name || 'Not set'
 
   return (
     <div className="min-h-screen bg-background">
@@ -218,9 +237,9 @@ export default function Profile() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Profile Picture</label>
                       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                        {(editForm.avatar_url?.trim() || profile?.avatar_url) ? (
+                        {displayAvatarUrl ? (
                           <img 
-                            src={editForm.avatar_url?.trim() || profile?.avatar_url || ''} 
+                            src={displayAvatarUrl} 
                             alt="Profile" 
                             className="w-full h-full object-cover"
                           />
@@ -231,7 +250,7 @@ export default function Profile() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                      <p className="text-lg">{editForm.full_name?.trim() || profile?.full_name || 'Not set'}</p>
+                      <p className="text-lg">{displayFullName}</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Email</label>
