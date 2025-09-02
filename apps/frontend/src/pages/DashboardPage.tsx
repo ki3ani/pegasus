@@ -1,129 +1,177 @@
 import { useEffect } from 'react';
 import { useWalletStore } from '../store/walletStore';
-import { useAuthStore } from '../store/authStore';
+import { useAuth } from '../contexts/AuthContext';
+import Navigation from '../components/Navigation';
+import WalletStatus from '../components/WalletStatus';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChartBarIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 export default function DashboardPage() {
-  const { publicKey, balances, loadBalances, isLoadingBalances, disconnect } = useWalletStore();
-  const { user, logout } = useAuthStore();
+  const { 
+    publicKey, 
+    balance, 
+    assets, 
+    refreshBalance, 
+    isLoading, 
+    isConnected 
+  } = useWalletStore();
+  const { profile } = useAuth();
 
   useEffect(() => {
-    if (publicKey) {
-      loadBalances();
+    if (publicKey && isConnected) {
+      refreshBalance();
     }
-  }, [publicKey, loadBalances]);
-
-  const handleLogout = () => {
-    disconnect();
-    logout();
-  };
+  }, [publicKey, isConnected, refreshBalance]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">RebalanceX</h1>
-              <p className="text-sm text-gray-500">Welcome back, {user?.email}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Logout
-            </button>
-          </div>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+
+      <main className="container py-6 max-w-6xl">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your Stellar portfolio and track your investments
+          </p>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Wallet Info */}
-          <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Wallet Information
-              </h3>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Public Key:</span>
-                  <br />
-                  <code className="mt-1 text-xs bg-gray-100 px-2 py-1 rounded">
-                    {publicKey}
-                  </code>
-                </p>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Wallet Status */}
+          <div className="lg:col-span-2">
+            <WalletStatus />
           </div>
 
-          {/* Balances */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  Account Balances
-                </h3>
-                <button
-                  onClick={loadBalances}
-                  disabled={isLoadingBalances}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-3 py-1 rounded-md text-sm"
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ChartBarIcon className="h-5 w-5" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>
+                Common wallet operations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/wallet-setup'}
+              >
+                <CurrencyDollarIcon className="h-4 w-4 mr-2" />
+                Manage Wallet
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                disabled={!isConnected}
+              >
+                <ChartBarIcon className="h-4 w-4 mr-2" />
+                View Portfolio
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Balances Section */}
+        {isConnected && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <CurrencyDollarIcon className="h-5 w-5" />
+                    Account Balances
+                  </CardTitle>
+                  <CardDescription>
+                    Your current Stellar asset balances
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={refreshBalance}
+                  disabled={isLoading}
+                  variant="outline"
+                  size="sm"
                 >
-                  {isLoadingBalances ? 'Loading...' : 'Refresh'}
-                </button>
+                  {isLoading ? 'Loading...' : 'Refresh'}
+                </Button>
               </div>
-              
-              {balances.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">
-                    {isLoadingBalances ? 'Loading balances...' : 'No balances found. Fund your wallet to get started.'}
+            </CardHeader>
+            <CardContent>
+              {!balance && assets.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    {isLoading ? 'Loading balances...' : 'No balances found. Fund your wallet to get started.'}
                   </p>
-                  {!isLoadingBalances && (
-                    <p className="text-sm text-gray-400 mt-2">
-                      For testnet: Visit{' '}
-                      <a
-                        href={`https://friendbot.stellar.org?addr=${publicKey}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 hover:text-indigo-500"
-                      >
-                        Stellar Friendbot
-                      </a>
-                      {' '}to fund your account
-                    </p>
+                  {!isLoading && (
+                    <div className="mt-4 p-4 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        For testnet: Visit{' '}
+                        <a
+                          href={`https://friendbot.stellar.org?addr=${publicKey}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-foreground"
+                        >
+                          Stellar Friendbot
+                        </a>
+                        {' '}to fund your account
+                      </p>
+                    </div>
                   )}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {balances.map((balance, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                      <span className="font-medium text-gray-900">
-                        {balance.asset}
+                  {balance && (
+                    <div className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg">
+                      <span className="font-medium">XLM</span>
+                      <span className="text-lg font-semibold">
+                        {parseFloat(balance).toLocaleString()}
                       </span>
-                      <span className="text-gray-600">
-                        {parseFloat(balance.balance).toLocaleString()}
+                    </div>
+                  )}
+                  {assets
+                    .map((asset, index) => (
+                    <div key={index} className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg">
+                      <span className="font-medium">
+                        {asset.asset || 'Unknown'}
+                      </span>
+                      <span className="text-lg font-semibold">
+                        {parseFloat(asset.balance).toLocaleString()}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Coming Soon */}
-          <div className="bg-white overflow-hidden shadow rounded-lg mt-6">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Portfolio Management
-              </h3>
-              <div className="text-center py-8 text-gray-500">
-                <p>Portfolio creation and management coming in Phase 2!</p>
-                <p className="text-sm mt-2">This is just the wallet setup phase.</p>
-              </div>
+        {/* Coming Soon */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>🚀 Coming in Phase 2</CardTitle>
+            <CardDescription>
+              Advanced portfolio management features
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Portfolio rebalancing, automated strategies, and advanced analytics are coming soon!
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Automated Rebalancing', 'DCA Strategies', 'Risk Analytics', 'Yield Optimization'].map((feature) => (
+                <span key={feature} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  {feature}
+                </span>
+              ))}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

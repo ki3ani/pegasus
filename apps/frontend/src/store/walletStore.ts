@@ -1,170 +1,158 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { StellarWalletService } from '../services/stellar';
-import { FreighterService } from '../services/freighter';
-import type { WalletInfo, EncryptedWallet } from '../services/stellar';
-import type { FreighterWallet } from '../services/freighter';
+import { connectFreighter } from '../utils/freighter';
 
-export type WalletType = 'generated' | 'imported' | 'freighter';
-
-export interface WalletState {
-  // Wallet info
-  publicKey: string | null;
-  walletType: WalletType | null;
-  isConnected: boolean;
-  encryptedWallet: EncryptedWallet | null;
-  
-  // Freighter specific
-  freighterWallet: FreighterWallet | null;
-  
-  // Balance info
-  balances: Array<{ asset: string; balance: string }>;
-  isLoadingBalances: boolean;
-  
-  // Actions
-  generateWallet: (password: string) => Promise<WalletInfo>;
-  importWallet: (secretKey: string, password: string) => Promise<WalletInfo>;
-  connectFreighter: () => Promise<FreighterWallet | null>;
-  decryptWallet: (password: string) => Promise<WalletInfo | null>;
-  loadBalances: () => Promise<void>;
-  disconnect: () => void;
-  
-  // Getters
-  hasWallet: () => boolean;
-  isWalletDecrypted: () => boolean;
+// Types for Stellar API responses
+interface StellarBalance {
+  balance: string;
+  asset_type: string;
+  asset_code?: string;
+  asset_issuer?: string;
 }
 
-export const useWalletStore = create<WalletState>()(
+interface StellarAccount {
+  balances: StellarBalance[];
+}
+
+interface WalletState {
+  publicKey: string | null;
+  isConnected: boolean;
+  balance: string | null;
+  assets: Array<{
+    asset: string;
+    balance: string;
+  }>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface WalletActions {
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  refreshBalance: () => Promise<void>;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+}
+
+type WalletStore = WalletState & WalletActions;
+
+export const useWalletStore = create<WalletStore>()(
   persist(
     (set, get) => ({
+      // Initial state
       publicKey: null,
-      walletType: null,
       isConnected: false,
-      encryptedWallet: null,
-      freighterWallet: null,
-      balances: [],
-      isLoadingBalances: false,
+      balance: null,
+      assets: [],
+      isLoading: false,
+      error: null,
 
-      generateWallet: async (password: string) => {
-        const wallet = StellarWalletService.generateWallet();
-        const encrypted = StellarWalletService.encryptWallet(wallet, password);
-        
-        // Fund testnet account
-        if (import.meta.env.VITE_STELLAR_NETWORK === 'testnet') {
-          await StellarWalletService.fundTestnetAccount(wallet.publicKey);
-        }
-        
-        set({
-          publicKey: wallet.publicKey,
-          walletType: 'generated',
-          isConnected: true,
-          encryptedWallet: encrypted,
-          freighterWallet: null
-        });
+      // Actions
+      connect: async () => {
+        console.log('WalletStore connect called')
+        try {
+          set({ isLoading: true, error: null });
+          console.log('Calling connectFreighter...')
 
-        // Load initial balances
-        get().loadBalances();
-        
-        return wallet;
-      },
+          const walletData = await connectFreighter();
+          console.log('connectFreighter result:', walletData)
 
-      importWallet: async (secretKey: string, password: string) => {
-        const wallet = StellarWalletService.importWallet(secretKey);
-        const encrypted = StellarWalletService.encryptWallet(wallet, password);
-        
-        set({
-          publicKey: wallet.publicKey,
-          walletType: 'imported',
-          isConnected: true,
-          encryptedWallet: encrypted,
-          freighterWallet: null
-        });
+          if (walletData.publicKey) {
+            console.log('Setting wallet data:', walletData.publicKey)
+            
+            set({
+              publicKey: walletData.publicKey,
+              isConnected: true,
+              isLoading: false
+            });
 
-        // Load initial balances
-        get().loadBalances();
-        
-        return wallet;
-      },
-
-      connectFreighter: async () => {
-        const freighterWallet = await FreighterService.connect();
-        
-        if (freighterWallet) {
+            // Fetch initial balance and assets
+            console.log('Fetching initial balance...')
+            await get().refreshBalance();
+          } else {
+            throw new Error('Failed to connect to Freighter');
+          }
+        } catch (error) {
+          console.error('Failed to connect wallet:', error);
           set({
-            publicKey: freighterWallet.publicKey,
-            walletType: 'freighter',
-            isConnected: true,
-            encryptedWallet: null,
-            freighterWallet
+            error: error instanceof Error ? error.message : 'Failed to connect wallet',
+            isLoading: false
           });
-
-          // Load initial balances
-          get().loadBalances();
-        }
-        
-        return freighterWallet;
-      },
-
-      decryptWallet: async (password: string) => {
-        const { encryptedWallet } = get();
-        if (!encryptedWallet) return null;
-
-        try {
-          const wallet = StellarWalletService.decryptWallet(encryptedWallet, password);
-          return wallet;
-        } catch (error) {
-          console.error('Failed to decrypt wallet:', error);
-          return null;
-        }
-      },
-
-      loadBalances: async () => {
-        const { publicKey } = get();
-        if (!publicKey) return;
-
-        set({ isLoadingBalances: true });
-        
-        try {
-          const balances = await StellarWalletService.getAccountBalances(publicKey);
-          set({ balances });
-        } catch (error) {
-          console.error('Failed to load balances:', error);
-          set({ balances: [] });
-        } finally {
-          set({ isLoadingBalances: false });
         }
       },
 
       disconnect: () => {
         set({
           publicKey: null,
-          walletType: null,
           isConnected: false,
-          encryptedWallet: null,
-          freighterWallet: null,
-          balances: []
+          balance: null,
+          assets: [],
+          error: null
         });
       },
 
-      hasWallet: () => {
-        const state = get();
-        return !!(state.encryptedWallet || state.freighterWallet);
+      refreshBalance: async () => {
+        try {
+          const { publicKey } = get();
+          if (!publicKey) return;
+
+          set({ isLoading: true, error: null });
+
+          // Fetch account details from Stellar testnet
+          const response = await fetch(`https://horizon-testnet.stellar.org/accounts/${publicKey}`);
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              throw new Error('Account not found on Stellar testnet. Please check your wallet connection.');
+            }
+            throw new Error(`Failed to fetch account data: ${response.status} ${response.statusText}`);
+          }
+
+          const accountData: StellarAccount = await response.json();
+
+          if (accountData.balances) {
+            // Get XLM balance
+            const xlmBalance = accountData.balances.find((b: StellarBalance) => b.asset_type === 'native');
+            const xlmAmount = xlmBalance ? xlmBalance.balance : '0';
+
+            // Get other assets (excluding XLM)
+            const otherAssets = accountData.balances
+              .filter((b: StellarBalance) => b.asset_type !== 'native')
+              .map((b: StellarBalance) => ({
+                asset: `${b.asset_code}:${b.asset_issuer}`,
+                balance: b.balance
+              }));
+
+            set({
+              balance: xlmAmount,
+              assets: otherAssets,
+              isLoading: false
+            });
+          } else {
+            // Account exists but has no balances
+            set({
+              balance: '0',
+              assets: [],
+              isLoading: false
+            });
+          }
+        } catch (error) {
+          console.error('Failed to refresh balance:', error);
+          set({
+            error: error instanceof Error ? error.message : 'Failed to refresh balance',
+            isLoading: false
+          });
+        }
       },
 
-      isWalletDecrypted: () => {
-        const { walletType, encryptedWallet, freighterWallet } = get();
-        if (walletType === 'freighter') return !!freighterWallet;
-        return !!encryptedWallet;
-      }
+      setLoading: (loading: boolean) => set({ isLoading: loading }),
+      setError: (error: string | null) => set({ error })
     }),
     {
       name: 'wallet-storage',
       partialize: (state) => ({
         publicKey: state.publicKey,
-        walletType: state.walletType,
-        isConnected: state.isConnected,
-        encryptedWallet: state.encryptedWallet,
-        // Note: freighterWallet is not persisted for security
+        isConnected: state.isConnected
       })
     }
   )

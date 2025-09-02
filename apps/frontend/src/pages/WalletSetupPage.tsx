@@ -1,267 +1,188 @@
-import { useState } from 'react';
-import { useWalletStore } from '../store/walletStore';
-import { useAuthStore } from '../store/authStore';
-import { FreighterService } from '../services/freighter';
-import Navigation from '../components/Navigation';
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useWalletStore } from '@/store/walletStore'
+import Navigation from '@/components/Navigation'
+import AdvancedWalletSetup from '@/components/wallet/AdvancedWalletSetup'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { isFreighterAvailable } from '@/utils/freighter'
 
-export default function WalletSetupPage() {
-  const [activeTab, setActiveTab] = useState<'generate' | 'import' | 'freighter'>('freighter');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+function WalletSetupPage() {
+  const navigate = useNavigate()
+  const {
+    connect,
+    isConnected,
+    publicKey,
+    isLoading,
+    error
+  } = useWalletStore()
 
-  const { generateWallet, importWallet, connectFreighter } = useWalletStore();
-  const { updateWallet, user } = useAuthStore();
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [freighterAvailable, setFreighterAvailable] = useState(false)
+  const [freighterChecking, setFreighterChecking] = useState(true)
+
+  useEffect(() => {
+    const checkFreighter = async () => {
+      try {
+        console.log('Checking Freighter availability...')
+        const available = await isFreighterAvailable()
+        console.log('Freighter detection result:', available)
+        setFreighterAvailable(available)
+      } catch (err) {
+        console.error('Error checking Freighter:', err)
+        setFreighterAvailable(false)
+      } finally {
+        setFreighterChecking(false)
+      }
+    }
+
+    checkFreighter()
+  }, [])
+
 
   const handleFreighterConnect = async () => {
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      if (!FreighterService.isFreighterAvailable()) {
-        throw new Error('Freighter extension not found. Please install Freighter wallet.');
-      }
+    console.log('Starting Freighter connection...')
+    setSuccess('')
 
-      const freighterWallet = await connectFreighter();
-      if (freighterWallet) {
-        await updateWallet(freighterWallet.publicKey);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateWallet = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    
     try {
-      const wallet = await generateWallet(password);
-      await updateWallet(wallet.publicKey, JSON.stringify({ encrypted: true }));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
+      console.log('Calling connect function...')
+      await connect()
+      console.log('Connect function completed successfully')
+      setSuccess('Freighter connected successfully!')
+      setTimeout(() => navigate('/dashboard'), 1500)
+    } catch (err) {
+      console.error('Freighter connection error:', err)
     }
-  };
+  }
 
-  const handleImportWallet = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      const wallet = await importWallet(secretKey, password);
-      await updateWallet(wallet.publicKey, JSON.stringify({ encrypted: true }));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleAdvancedSuccess = () => {
+    setSuccess('Wallet setup completed successfully!')
+    setTimeout(() => navigate('/dashboard'), 1500)
+  }
+
+  if (showAdvanced) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container py-6">
+          <AdvancedWalletSetup
+            onSuccess={handleAdvancedSuccess}
+            onCancel={() => setShowAdvanced(false)}
+          />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Set up your wallet
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Welcome {user?.email}! Choose how you'd like to manage your Stellar wallet.
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-6">
-            <button
-              onClick={() => setActiveTab('freighter')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md ${
-                activeTab === 'freighter'
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Freighter
-            </button>
-            <button
-              onClick={() => setActiveTab('generate')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md ${
-                activeTab === 'generate'
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Generate
-            </button>
-            <button
-              onClick={() => setActiveTab('import')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md ${
-                activeTab === 'import'
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Import
-            </button>
-          </div>
+      <main className="container py-6 max-w-2xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Connect Your Wallet
+          </h1>
+          <p className="text-muted-foreground">
+            Choose how you'd like to connect to access your Stellar assets
+          </p>
+        </div>
 
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {/* Freighter Tab */}
-          {activeTab === 'freighter' && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-4">
-                  Connect your existing Freighter wallet for a seamless experience.
+        {/* Freighter Connection */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-lg">🚀</span>
+              Freighter Wallet (Recommended)
+            </CardTitle>
+            <CardDescription>
+              Connect securely with the official Stellar browser extension
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {freighterChecking ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Checking for Freighter...</p>
+              </div>
+            ) : !freighterAvailable ? (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <span className="text-yellow-600">⚠️</span>
+                <AlertDescription className="text-yellow-800">
+                  Freighter is not installed.{' '}
+                  <a
+                    href="https://www.freighter.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-yellow-900"
+                  >
+                    Install Freighter
+                  </a>{' '}
+                  to continue.
+                </AlertDescription>
+              </Alert>
+            ) : isConnected && publicKey ? (
+              <div className="text-center py-8">
+                <span className="text-6xl mb-4 block">✅</span>
+                <h3 className="text-lg font-semibold mb-2 text-green-600">Freighter Connected</h3>
+                <p className="text-muted-foreground mb-4">
+                  Your Freighter wallet is connected and ready to use
                 </p>
-                <button
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-green-800 font-medium">Connected Account:</p>
+                  <code className="text-xs text-green-700 break-all">
+                    {publicKey}
+                  </code>
+                </div>
+                <Button
                   onClick={handleFreighterConnect}
                   disabled={isLoading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  variant="outline"
+                  size="lg"
+                  className="w-full max-w-xs"
                 >
-                  {isLoading ? 'Connecting...' : 'Connect Freighter Wallet'}
-                </button>
+                  {isLoading ? 'Reconnecting...' : 'Reconnect Freighter'}
+                </Button>
               </div>
-            </div>
-          )}
-
-          {/* Generate Tab */}
-          {activeTab === 'generate' && (
-            <form onSubmit={handleGenerateWallet} className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Generate a new Stellar wallet. Your keys will be encrypted and stored securely.
+            ) : (
+              <div className="text-center py-8">
+                <span className="text-6xl mb-4 block">🚀</span>
+                <h3 className="text-lg font-semibold mb-2">Connect Your Freighter Wallet</h3>
+                <p className="text-muted-foreground mb-6">
+                  Securely connect your Freighter wallet to access your Stellar assets
                 </p>
+                <Button
+                  onClick={handleFreighterConnect}
+                  disabled={isLoading}
+                  size="lg"
+                  className="w-full max-w-xs"
+                >
+                  {isLoading ? 'Connecting...' : 'Connect Freighter'}
+                </Button>
               </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Wallet Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Choose a strong password"
-                />
-              </div>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Confirm your password"
-                />
-                {confirmPassword && password !== confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading || password !== confirmPassword || !password}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                {isLoading ? 'Generating...' : 'Generate Wallet'}
-              </button>
-            </form>
-          )}
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Import Tab */}
-          {activeTab === 'import' && (
-            <form onSubmit={handleImportWallet} className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Import an existing Stellar wallet using your secret key.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="secretKey" className="block text-sm font-medium text-gray-700">
-                  Secret Key
-                </label>
-                <input
-                  id="secretKey"
-                  type="password"
-                  required
-                  value={secretKey}
-                  onChange={(e) => setSecretKey(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm px-3 py-2 border"
-                  placeholder="S..."
-                />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Wallet Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Choose a strong password"
-                />
-              </div>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Confirm your password"
-                />
-                {confirmPassword && password !== confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading || password !== confirmPassword || !password || !secretKey}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-              >
-                {isLoading ? 'Importing...' : 'Import Wallet'}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
+        {/* Error/Success Messages */}
+        {error && (
+          <Alert className="mt-4 border-red-200 bg-red-50">
+            <span className="text-red-600">❌</span>
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="mt-4 border-green-200 bg-green-50">
+            <span className="text-green-600">✅</span>
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
+          </Alert>
+        )}
       </main>
     </div>
-  );
+  )
 }
+
+export default WalletSetupPage
