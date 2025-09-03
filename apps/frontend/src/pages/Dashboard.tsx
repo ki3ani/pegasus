@@ -15,20 +15,15 @@ import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
   const { profile } = useAuth()
-  const { publicKey, balances, loadBalances, isLoadingBalances, hasWallet } = useWalletStore()
+  const { publicKey, balance, assets, refreshBalance, isLoading, isConnected } = useWalletStore()
 
   useEffect(() => {
-    if (publicKey && hasWallet()) {
-      loadBalances()
+    if (publicKey && isConnected) {
+      refreshBalance();
     }
-  }, [publicKey, loadBalances, hasWallet])
+  }, [publicKey, isConnected, refreshBalance])
 
-  const totalBalance = balances.reduce((sum, balance) => {
-    if (balance.asset === 'XLM') {
-      return sum + parseFloat(balance.balance)
-    }
-    return sum
-  }, 0)
+  const totalBalance = balance ? parseFloat(balance) : 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,7 +50,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{totalBalance.toLocaleString()} XLM</div>
               <p className="text-xs text-muted-foreground">
-                {hasWallet() ? '+0% from yesterday' : 'Set up wallet to view balance'}
+                {isConnected ? '+0% from yesterday' : 'Set up wallet to view balance'}
               </p>
             </CardContent>
           </Card>
@@ -66,7 +61,7 @@ export default function Dashboard() {
               <ChartBarIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{balances.length}</div>
+              <div className="text-2xl font-bold">{assets.length + (balance && parseFloat(balance) > 0 ? 1 : 0)}</div>
               <p className="text-xs text-muted-foreground">
                 Active holdings
               </p>
@@ -111,23 +106,23 @@ export default function Dashboard() {
                     Wallet Status
                   </CardTitle>
                   <CardDescription>
-                    {hasWallet() ? 'Connected and ready' : 'Set up your wallet to start trading'}
+                    {isConnected ? 'Connected and ready' : 'Set up your wallet to start trading'}
                   </CardDescription>
                 </div>
-                {hasWallet() && (
+                {isConnected && (
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={loadBalances}
-                    disabled={isLoadingBalances}
+                    onClick={refreshBalance}
+                    disabled={isLoading}
                   >
-                    <RefreshCw className={`h-4 w-4 ${isLoadingBalances ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {hasWallet() ? (
+              {isConnected ? (
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -167,14 +162,14 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {hasWallet() ? (
+              {isConnected ? (
                 <div className="space-y-4">
-                  {balances.length === 0 ? (
+                  {!balance && assets.length === 0 ? (
                     <div className="text-center py-4">
                       <p className="text-sm text-muted-foreground mb-4">
-                        {isLoadingBalances ? 'Loading balances...' : 'No balances found'}
+                        {isLoading ? 'Loading balances...' : 'No balances found'}
                       </p>
-                      {!isLoadingBalances && publicKey && (
+                      {!isLoading && publicKey && (
                         <Button variant="outline" size="sm" asChild>
                           <a
                             href={`https://friendbot.stellar.org?addr=${publicKey}`}
@@ -187,12 +182,21 @@ export default function Dashboard() {
                       )}
                     </div>
                   ) : (
-                    balances.map((balance, index) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-border last:border-b-0">
-                        <span className="font-medium">{balance.asset}</span>
-                        <span className="text-muted-foreground">{parseFloat(balance.balance).toLocaleString()}</span>
-                      </div>
-                    ))
+                    <div>
+                      {balance && (
+                        <div className="flex justify-between items-center py-2 border-b border-border">
+                          <span className="font-medium">XLM</span>
+                          <span className="text-muted-foreground">{parseFloat(balance).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {assets
+                        .map((asset, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-border last:border-b-0">
+                          <span className="font-medium">{asset.asset || 'Unknown'}</span>
+                          <span className="text-muted-foreground">{parseFloat(asset.balance).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ) : (

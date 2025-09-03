@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useWalletStore } from '../store/walletStore'
 import Navigation from '../components/Navigation'
-import { 
-  UserCircleIcon, 
-  WalletIcon, 
+import WalletStatus from '../components/WalletStatus'
+import {
+  UserCircleIcon,
   PencilIcon,
   CheckIcon,
   XMarkIcon,
@@ -16,7 +16,7 @@ import {
 
 export default function ProfileDashboard() {
   const { profile, updateProfile, loading, error } = useAuth()
-  const { publicKey, balances, loadBalances, isLoadingBalances, hasWallet } = useWalletStore()
+  const { publicKey, balance, assets, refreshBalance, isLoading, isConnected } = useWalletStore()
   
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -25,10 +25,10 @@ export default function ProfileDashboard() {
   })
 
   useEffect(() => {
-    if (publicKey && hasWallet()) {
-      loadBalances()
+    if (publicKey && isConnected) {
+      refreshBalance()
     }
-  }, [publicKey, loadBalances, hasWallet])
+  }, [publicKey, isConnected, refreshBalance])
 
   useEffect(() => {
     if (profile) {
@@ -61,12 +61,7 @@ export default function ProfileDashboard() {
     setIsEditing(false)
   }
 
-  const totalBalance = balances.reduce((sum, balance) => {
-    if (balance.asset === 'XLM') {
-      return sum + parseFloat(balance.balance)
-    }
-    return sum
-  }, 0)
+  const totalBalance = balance ? parseFloat(balance) : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,44 +169,7 @@ export default function ProfileDashboard() {
           </div>
 
           {/* Wallet Status */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-4">
-              <WalletIcon className="h-5 w-5 mr-2" />
-              Wallet Status
-            </h3>
-            
-            {hasWallet() ? (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-green-700 text-sm font-medium">Connected</span>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500">Public Key</label>
-                  <p className="text-gray-900 text-xs font-mono bg-gray-50 p-2 rounded break-all">
-                    {publicKey}
-                  </p>
-                </div>
-                <button
-                  onClick={() => window.location.href = '/wallet-setup'}
-                  className="w-full px-4 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 text-sm font-medium"
-                >
-                  Manage Wallet
-                </button>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <WalletIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600 mb-4">No wallet connected</p>
-                <button
-                  onClick={() => window.location.href = '/wallet-setup'}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
-                >
-                  Setup Wallet
-                </button>
-              </div>
-            )}
-          </div>
+          <WalletStatus />
 
           {/* Portfolio Summary */}
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -220,18 +178,18 @@ export default function ProfileDashboard() {
                 <ChartBarIcon className="h-5 w-5 mr-2" />
                 Portfolio
               </h3>
-              {hasWallet() && (
+              {isConnected && (
                 <button
-                  onClick={loadBalances}
-                  disabled={isLoadingBalances}
+                  onClick={refreshBalance}
+                  disabled={isLoading}
                   className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
                 >
-                  {isLoadingBalances ? 'Refreshing...' : 'Refresh'}
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
                 </button>
               )}
             </div>
 
-            {hasWallet() ? (
+            {isConnected ? (
               <div className="space-y-4">
                 <div>
                   <div className="flex items-baseline">
@@ -244,12 +202,12 @@ export default function ProfileDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  {balances.length === 0 ? (
+                  {!balance && assets.length === 0 ? (
                     <div className="text-center py-4">
                       <p className="text-gray-500 text-sm">
-                        {isLoadingBalances ? 'Loading balances...' : 'No balances found'}
+                        {isLoading ? 'Loading balances...' : 'No balances found'}
                       </p>
-                      {!isLoadingBalances && publicKey && (
+                      {!isLoading && publicKey && (
                         <a
                           href={`https://friendbot.stellar.org?addr=${publicKey}`}
                           target="_blank"
@@ -261,12 +219,21 @@ export default function ProfileDashboard() {
                       )}
                     </div>
                   ) : (
-                    balances.map((balance, index) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                        <span className="font-medium text-gray-900">{balance.asset}</span>
-                        <span className="text-gray-600">{parseFloat(balance.balance).toLocaleString()}</span>
-                      </div>
-                    ))
+                    <div>
+                      {balance && (
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="font-medium text-gray-900">XLM</span>
+                          <span className="text-gray-600">{parseFloat(balance).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {assets
+                        .map((asset, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                          <span className="font-medium text-gray-900">{asset.asset || 'Unknown'}</span>
+                          <span className="text-gray-600">{parseFloat(asset.balance).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -287,7 +254,7 @@ export default function ProfileDashboard() {
               className="flex items-center justify-center space-x-2 p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               onClick={() => window.location.href = '/wallet-setup'}
             >
-              <WalletIcon className="h-5 w-5 text-indigo-600" />
+              <CurrencyDollarIcon className="h-5 w-5 text-indigo-600" />
               <span>Manage Wallet</span>
             </button>
             <button className="flex items-center justify-center space-x-2 p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
