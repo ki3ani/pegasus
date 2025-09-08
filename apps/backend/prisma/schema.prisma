@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "./node_modules/@prisma/client"
 }
 
 datasource db {
@@ -17,6 +18,8 @@ model User {
   updatedAt            DateTime    @updatedAt
   
   portfolios           Portfolio[]
+  kaleRewards          KaleReward[]
+  kaleStaking          KaleStaking[]
   
   @@map("users")
 }
@@ -25,42 +28,150 @@ model Portfolio {
   id                String             @id @default(cuid())
   userId            String
   name              String
-  targetAllocations Json              // { "XLM": 50, "USDC": 30, "BTC": 20 }
-  riskThreshold     Float             @default(5.0) // percentage
+  targetAllocations Json              // { "XLM": 50, "USDC": 30, "KALE": 20 }
+  riskThreshold     Float             @default(5.0) // percentage drift threshold
+  autoRebalance     Boolean           @default(false) // auto-rebalance enabled
+  maxAutoAmount     String            @default("1000") // max USD for auto-rebalance
+  minTradeAmount    String            @default("10") // min trade size in USD
+  maxSlippage       Float             @default(1.0) // max slippage tolerance %
+  rebalanceFrequency String           @default("weekly") // check frequency
   isActive          Boolean           @default(true)
   kaleStakingEnabled Boolean          @default(false)
+  lastRebalance     DateTime?         // when last rebalanced
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions      Transaction[]
+  snapshots         PortfolioSnapshot[]
   
   @@map("portfolios")
 }
 
 model Transaction {
-  id          String      @id @default(cuid())
-  portfolioId String
-  type        String      // "rebalance", "deposit", "withdrawal"
-  fromAsset   String?
-  toAsset     String?
-  fromAmount  String?     // Using String for precise decimal handling
-  toAmount    String?
-  stellarTxId String?     // Stellar transaction hash
-  status      String      @default("pending") // "pending", "completed", "failed"
-  createdAt   DateTime    @default(now())
+  id            String      @id @default(cuid())
+  portfolioId   String
+  type          String      // "rebalance", "deposit", "withdrawal", "auto_rebalance"
+  triggerReason String?     // "drift_threshold", "manual", "scheduled"
+  fromAsset     String?
+  toAsset       String?
+  fromAmount    String?     // Using String for precise decimal handling
+  toAmount      String?
+  expectedAmount String?    // Expected amount before slippage
+  actualSlippage Float?     // Actual slippage experienced
+  gasFee        String?     // Transaction fees in XLM
+  stellarTxId   String?     // Stellar transaction hash
+  driftBefore   Float?      // Portfolio drift before rebalance
+  driftAfter    Float?      // Portfolio drift after rebalance
+  status        String      @default("pending") // "pending", "completed", "failed", "cancelled"
+  errorMessage  String?     // Error details if failed
+  createdAt     DateTime    @default(now())
+  completedAt   DateTime?   // When transaction was completed
   
-  portfolio   Portfolio   @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolio     Portfolio   @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   
   @@map("transactions")
+  @@index([portfolioId, createdAt])
+  @@index([status, createdAt])
 }
 
 model PriceData {
-  id        String   @id @default(cuid())
-  asset     String   // "XLM", "USDC", "BTC"
-  price     String   // Using String for precise decimal handling
-  timestamp DateTime @default(now())
+  id            String   @id @default(cuid())
+  asset         String   // "XLM", "USDC", "KALE"
+  priceUsd      String   // Price in USD, using String for precision
+  volume24h     String?  // 24h trading volume
+  marketCap     String?  // Market cap in USD
+  source        String   @default("reflector") // "reflector", "stellar", "manual"
+  confidence    Float?   // Price confidence score from Reflector
+  timestamp     DateTime @default(now())
   
   @@map("price_data")
   @@index([asset, timestamp])
+  @@index([source, timestamp])
+  @@unique([asset, timestamp, source]) // Prevent duplicate price points
+}
+
+model PortfolioSnapshot {
+  id              String    @id @default(cuid())
+  portfolioId     String
+  totalValueUsd   String    // Total portfolio value in USD
+  allocations     Json      // Current allocations: { "XLM": 45.2, "USDC": 35.8, "KALE": 19.0 }
+  drift           Float     // Current drift from target
+  assetBalances   Json      // Raw balances: { "XLM": "1000.5", "USDC": "500.0" }
+  priceSnapshot   Json      // Prices at snapshot time: { "XLM": "0.12", "USDC": "1.00" }
+  timestamp       DateTime  @default(now())
+  
+  portfolio       Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  
+  @@map("portfolio_snapshots")
+  @@index([portfolioId, timestamp])
+}
+
+// For tracking supported assets and their metadata
+model Asset {
+  id            String    @id @default(cuid())
+  code          String    @unique // "XLM", "USDC", "KALE"
+  issuer        String?   // Stellar asset issuer (null for XLM)
+  name          String    // "Stellar Lumens", "USD Coin", "Kale Token"
+  decimals      Int       @default(7) // Stellar standard
+  isActive      Boolean   @default(true)
+  contractId    String?   // Soroban contract address if applicable
+  reflectorFeed String?   // Reflector oracle feed ID
+  minTradeSize  String    @default("1") // Minimum trade size
+  createdAt     DateTime  @default(now())
+  
+  @@map("assets")
+}
+
+// Reflector Oracle Rebalancing Sessions
+model RebalanceSession {
+  id              String    @id @default(cuid())
+  recommendations Json      // Array of rebalance recommendations
+  timestamp       DateTime  @default(now())
+  source          String    @default("reflector-oracle")
+  
+  @@map("rebalance_sessions")
+  @@index([timestamp])
+}
+
+// KALE Token Rewards System
+model KaleReward {
+  id              String    @id @default(cuid())
+  userId          String
+  userPublicKey   String
+  amount          String    // Amount of KALE rewarded
+  type            String    // "rebalance", "auto_rebalance", "daily_bonus", "staking_reward"
+  description     String    // Human-readable description
+  portfolioId     String?   // Associated portfolio if applicable
+  transactionId   String?   // Associated transaction if applicable
+  status          String    @default("pending") // "pending", "completed", "failed", "pending_trustline"
+  transactionHash String?   // Stellar transaction hash when completed
+  errorMessage    String?   // Error details if failed
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("kale_rewards")
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+// KALE Token Staking System
+model KaleStaking {
+  id             String    @id @default(cuid())
+  userId         String
+  userPublicKey  String
+  stakedAmount   String    // Amount of KALE staked
+  apy            Float     // Annual percentage yield
+  startDate      DateTime  // When staking started
+  lastRewardDate DateTime  // Last time rewards were calculated
+  endDate        DateTime? // When staking ended (null if active)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("kale_staking")
+  @@index([userId, isActive])
+  @@index([lastRewardDate])
 }

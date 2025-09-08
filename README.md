@@ -151,6 +151,30 @@ cd apps/backend && npm test
 - [ ] Performance optimization
 - [ ] Full monitoring setup
 
+## 🔒 Security
+
+### Environment Variables
+All sensitive data is managed through environment variables. Never commit secrets to the repository.
+
+**Required Environment Variables:**
+- `JWT_SECRET` - JWT signing secret
+- `DATABASE_URL` - PostgreSQL connection string
+- `KALE_DISTRIBUTOR_SECRET` - Secret key for KALE token distribution (production only)
+- `WALLET_ENCRYPTION_KEY` - 32-character encryption key
+
+**Setup:**
+1. Copy `.env.example` to `.env`
+2. Generate secure secrets for each variable
+3. Use a secure key management system in production
+
+### Best Practices
+- All API endpoints use JWT authentication
+- Input validation on all requests
+- SQL injection protection via Prisma ORM  
+- Encrypted sensitive data storage
+- Rate limiting implemented
+- HTTPS-only in production
+
 ## 🌐 Deployment
 
 ### Staging

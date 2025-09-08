@@ -1,12 +1,12 @@
 import express from 'express';
-import { verifyToken } from '../utils/auth.js';
+import { verifyAnyToken } from '../utils/auth.js';
 import type { TokenPayload } from '../utils/auth.js';
 
 export interface AuthRequest extends express.Request {
   user?: TokenPayload;
 }
 
-export const authenticateToken = (req: AuthRequest, res: express.Response, next: express.NextFunction): void => {
+export const authenticateToken = async (req: AuthRequest, res: express.Response, next: express.NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -16,10 +16,11 @@ export const authenticateToken = (req: AuthRequest, res: express.Response, next:
   }
 
   try {
-    const decoded = verifyToken(token);
+    const decoded = await verifyAnyToken(token);
     req.user = decoded;
     next();
-  } catch {
+  } catch (error) {
+    console.error('Token verification failed:', error);
     res.status(403).json({ error: 'Invalid or expired token' });
   }
 };

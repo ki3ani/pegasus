@@ -5,6 +5,12 @@ import { config } from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import authRoutes from './routes/auth.js';
+import portfolioRoutes from './routes/portfolioRoutes.js';
+import pricesRoutes from './routes/pricesRoutes.js';
+import jobsRoutes from './routes/jobsRoutes.js';
+import { tradingRoutes } from './routes/tradingRoutes.js';
+import { kaleRoutes } from './routes/kaleRoutes.js';
+import { startPriceUpdateJob } from './jobs/priceUpdateJob.js';
 
 config();
 
@@ -17,7 +23,7 @@ const io = new Server(httpServer, {
   }
 });
 
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
 app.use(cors({
@@ -29,6 +35,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/portfolios', portfolioRoutes);
+app.use('/api/prices', pricesRoutes);
+app.use('/api/jobs', jobsRoutes);
+app.use('/api/trading', tradingRoutes);
+app.use('/api/kale', kaleRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'RebalanceX API is running' });
@@ -49,4 +60,7 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 WebSocket server ready`);
+  
+  // Start background jobs
+  startPriceUpdateJob();
 });
