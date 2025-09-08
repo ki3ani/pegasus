@@ -4,10 +4,12 @@ import {
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   WalletIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  AdjustmentsHorizontalIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline'
 
-export default function Navigation() {
+export function Navigation() {
   const { signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -30,6 +32,8 @@ export default function Navigation() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+    { name: 'Portfolios', href: '/portfolios', icon: AdjustmentsHorizontalIcon },
+    { name: 'KALE Farming', href: '/kale', icon: CurrencyDollarIcon },
     { name: 'Profile', href: '/profile', icon: UserCircleIcon },
     { name: 'Wallet', href: '/wallet-setup', icon: WalletIcon },
   ]
@@ -112,3 +116,5 @@ export default function Navigation() {
     </header>
   )
 }
+
+export default Navigation

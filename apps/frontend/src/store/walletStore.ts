@@ -32,6 +32,7 @@ interface WalletActions {
   refreshBalance: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  enableDemoMode: () => void;
 }
 
 type WalletStore = WalletState & WalletActions;
@@ -39,11 +40,14 @@ type WalletStore = WalletState & WalletActions;
 export const useWalletStore = create<WalletStore>()(
   persist(
     (set, get) => ({
-      // Initial state
-      publicKey: null,
-      isConnected: false,
-      balance: null,
-      assets: [],
+      // Initial state - Demo mode with mock wallet connection
+      publicKey: 'GDEMO123MOCKWALLET456FORDEMOVIDEO789ABCDEFGHIJKLMNOPQRSTUVWX',
+      isConnected: true,
+      balance: '1000.5',
+      assets: [
+        { asset: 'USDC', balance: '2500.0' },
+        { asset: 'KALE', balance: '750.25' }
+      ],
       isLoading: false,
       error: null,
 
@@ -146,7 +150,21 @@ export const useWalletStore = create<WalletStore>()(
       },
 
       setLoading: (loading: boolean) => set({ isLoading: loading }),
-      setError: (error: string | null) => set({ error })
+      setError: (error: string | null) => set({ error }),
+      
+      enableDemoMode: () => {
+        set({
+          publicKey: 'GDEMO123MOCKWALLET456FORDEMOVIDEO789ABCDEFGHIJKLMNOPQRSTUVWX',
+          isConnected: true,
+          balance: '1000.5',
+          assets: [
+            { asset: 'USDC', balance: '2500.0' },
+            { asset: 'KALE', balance: '750.25' }
+          ],
+          isLoading: false,
+          error: null
+        });
+      }
     }),
     {
       name: 'wallet-storage',

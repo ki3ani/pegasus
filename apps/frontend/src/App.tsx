@@ -1,13 +1,23 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useWalletStore } from './store/walletStore';
 import MinimalWelcome from './pages/MinimalWelcome';
 import SimpleAuthPage from './pages/SimpleAuthPage';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import WalletSetupPage from './pages/WalletSetupPage';
+import PortfolioPage from './pages/PortfolioPage';
+import KalePage from './pages/KalePage';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const { enableDemoMode } = useWalletStore();
+
+  // Enable demo mode for hackathon video
+  React.useEffect(() => {
+    enableDemoMode();
+  }, [enableDemoMode]);
 
   if (loading) {
     return (
@@ -37,6 +47,8 @@ function AppRoutes() {
           <>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/portfolios" element={<PortfolioPage />} />
+            <Route path="/kale" element={<KalePage />} />
             <Route path="/wallet-setup" element={<WalletSetupPage />} />
             <Route path="/" element={<Navigate to="/profile" replace />} />
             <Route path="*" element={<Navigate to="/profile" replace />} />
